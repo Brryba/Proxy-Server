@@ -1,13 +1,12 @@
-import lombok.Data;
+import lombok.Getter;
 
 import java.util.Arrays;
 
-@Data
+@Getter
 public class HTTPRequestInfo {
     private String request;
     private String method;
     private String protocol;
-    private String protocolVersion;
     private String absoluteUri;
     private String pathUri;
     private String host;
@@ -21,6 +20,7 @@ public class HTTPRequestInfo {
             throw new IllegalArgumentException("");
         }
         this.request = request;
+
         String[] requestParts = request.split("\n");
 
         String[] firstLineParts = requestParts[0].split(" ");
@@ -36,7 +36,6 @@ public class HTTPRequestInfo {
         this.pathUri = index > -1 ? URI.substring(index) : "/";
 
         this.protocol = firstLineParts[2].split("/")[0];
-        this.protocolVersion = firstLineParts[2].split("/")[1];
 
         String hostParameter = Arrays.stream(requestParts)
                 .filter(str -> str.startsWith("Host:"))
@@ -47,15 +46,14 @@ public class HTTPRequestInfo {
         if (hostParameter.contains(":")) {
             this.host = hostParameter.substring(0, hostParameter.indexOf(":"));
             this.port = Integer.parseInt(hostParameter.substring(hostParameter.indexOf(":") + 1).trim());
-        }
-
-        else {
+        } else {
             this.host = hostParameter;
             this.port = protocol.equalsIgnoreCase("HTTP") ? 80 : 443;
         }
     }
 
-    public String getRequestWithPathUri() {
-        return this.request.replace(this.absoluteUri, this.pathUri);
+    public String getProxyModifiedRequest() {
+        String request = this.request.replaceAll("Proxy-Connection:.*\r\n", "");;
+        return request.replace(this.absoluteUri, this.pathUri);
     }
 }
