@@ -23,13 +23,11 @@ public class HTTPRequestInfo {
         String[] firstLineParts = requestParts[0].split(" ");
         this.method = firstLineParts[0];
 
-        try {
-            URI uri = new URI(firstLineParts[1]);
-            this.absoluteUri = uri.toString();
-            this.pathUri = uri.getPath();
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("Invalid URI: " + firstLineParts[1]);
-        }
+        String URI = firstLineParts[1].trim();
+        this.absoluteUri = URI;
+        URI = URI.replace("https://", "").replace("http://", "");
+        int index = URI.indexOf("/");
+        this.pathUri = index > -1 ? URI.substring(index) : "/";
 
         this.protocol = firstLineParts[2].split("/")[0];
         this.protocolVersion = firstLineParts[2].split("/")[1];
@@ -49,5 +47,9 @@ public class HTTPRequestInfo {
             this.host = hostParameter;
             this.port = protocol.equalsIgnoreCase("HTTP") ? 80 : 443;
         }
+    }
+
+    public String getRequestWithPathUri() {
+        return this.request.replace(this.absoluteUri, this.pathUri);
     }
 }
