@@ -1,8 +1,8 @@
-import lombok.Data;
+import lombok.Getter;
 
 import java.util.Arrays;
 
-@Data
+@Getter
 public class HTTPRequestInfo {
     private String request;
     private String method;
@@ -21,6 +21,7 @@ public class HTTPRequestInfo {
             throw new IllegalArgumentException("");
         }
         this.request = request;
+
         String[] requestParts = request.split("\n");
 
         String[] firstLineParts = requestParts[0].split(" ");
@@ -55,7 +56,8 @@ public class HTTPRequestInfo {
         }
     }
 
-    public String getRequestWithPathUri() {
-        return this.request.replace(this.absoluteUri, this.pathUri);
+    public String getProxyModifiedRequest() {
+        String request = this.request.replaceAll("Proxy-Connection:.*\r\n", "");;
+        return request.replace(this.absoluteUri, this.pathUri);
     }
 }

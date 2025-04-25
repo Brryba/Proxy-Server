@@ -2,7 +2,6 @@ import java.io.IOException;
 import java.net.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 
 public class Main {
     static int MAX_THREADS = 30;
@@ -14,16 +13,6 @@ public class Main {
 
     public static void main(String[] args) {
         try (ServerSocket serverSocket = new ServerSocket(PORT, BACKLOG, InetAddress.getByName(HOST))) {
-            pool.execute(() -> {
-                while (true) {
-                    System.out.println("Pool size is now " + ((ThreadPoolExecutor) pool).getActiveCount());
-                    try {
-                        Thread.sleep(3000);
-                    } catch (InterruptedException e) {
-
-                    }
-                }
-            });
 
             while (true) {
                 Socket socket = serverSocket.accept();
@@ -36,7 +25,7 @@ public class Main {
 
     public static void createNewConnection(Socket clientSocket) {
         HTTPRequestInfo requestInfo = new HTTPRequestInfo();
-        byte[] buffer = new byte[8192];
+        byte[] buffer = new byte[16384];
         try {
             int bytesRead = clientSocket.getInputStream().read(buffer);
             try {
@@ -65,7 +54,7 @@ public class Main {
     public static void handleRequests(Socket clientSocket, Socket httpSocket) {
         try {
             HTTPRequestInfo request = new HTTPRequestInfo();
-            byte[] buffer = new byte[8192];
+            byte[] buffer = new byte[16384];
             while (true) {
                 int bytesRead = clientSocket.getInputStream().read(buffer);
                 if (bytesRead == -1) {
@@ -90,14 +79,14 @@ public class Main {
 
     public static void handleResponses(Socket clientSocket, Socket httpSocket) {
         try {
-            byte[] buffer = new byte[8192];
+            byte[] buffer = new byte[16384];
             while (true) {
                 int bytesRead = httpSocket.getInputStream().read(buffer);
                 if (bytesRead == -1) {
                     shutDownConnections(clientSocket, httpSocket);
                     break;
                 }
-                //WORK WITH RESPONSES HERE
+                logResponse(buffer, bytesRead);
                 clientSocket.getOutputStream().write(buffer, 0, bytesRead);
             }
         } catch (IOException e) {
@@ -105,9 +94,25 @@ public class Main {
         }
     }
 
+    private static void logResponse(byte[] bytes, int bytesRead) {
+        String response = new String(bytes, 0, bytesRead);
+        if (!response.startsWith("HTTP")) {
+            System.out.println("\nResponse with no header, length: " + bytesRead);
+            return;
+        }
+
+        int emptyLineIndex = response.indexOf("\r\n\r\n");
+        System.out.println("Response:");
+        if (emptyLineIndex == -1) {
+            System.out.println(response);
+        } else {
+            System.out.println(response.substring(0, emptyLineIndex));
+        }
+        System.out.println("\n");
+    }
+
     private static void shutDownConnections(Socket clientSocket, Socket httpSocket) {
         try {
-            System.out.println("Shutting down connection");
             clientSocket.close();
             httpSocket.close();
         } catch (IOException _) {
@@ -116,7 +121,7 @@ public class Main {
 
     private static String logAndUpdateRequestInfo(HTTPRequestInfo request) {
         System.out.println("Original request: \n" + request.getRequest());
-        String improvedRequest = request.getRequestWithPathUri();
+        String improvedRequest = request.getProxyModifiedRequest();
         System.out.println("Proxy-modified request: \n" + improvedRequest);
         return improvedRequest;
     }
