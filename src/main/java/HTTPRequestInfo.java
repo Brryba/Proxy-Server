@@ -1,7 +1,5 @@
 import lombok.Data;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 
 @Data
@@ -16,11 +14,19 @@ public class HTTPRequestInfo {
     private int port;
 
     public void setRequestData(byte[] requestData, int requestLength) throws IllegalArgumentException {
-        String request = new String(requestData, 0, requestLength);
+        String request;
+        try {
+            request = new String(requestData, 0, requestLength);
+        } catch (IndexOutOfBoundsException e) {
+            throw new IllegalArgumentException("");
+        }
         this.request = request;
         String[] requestParts = request.split("\n");
 
         String[] firstLineParts = requestParts[0].split(" ");
+        if (firstLineParts.length < 3) {
+            throw new IllegalArgumentException("Invalid request data: \n" + request);
+        }
         this.method = firstLineParts[0];
 
         String URI = firstLineParts[1].trim();
@@ -35,7 +41,7 @@ public class HTTPRequestInfo {
         String hostParameter = Arrays.stream(requestParts)
                 .filter(str -> str.startsWith("Host:"))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Host parameter missing"));
+                .orElseThrow(() -> new IllegalArgumentException("Host parameter missing: \n" + this.request));
 
         hostParameter = hostParameter.substring(hostParameter.indexOf(":") + 2).trim();
         if (hostParameter.contains(":")) {
