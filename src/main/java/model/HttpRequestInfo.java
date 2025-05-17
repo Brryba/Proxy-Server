@@ -1,9 +1,11 @@
+package model;
+
 import lombok.Getter;
 
 import java.util.Arrays;
 
 @Getter
-public class HTTPRequestInfo {
+public class HttpRequestInfo {
     private String request;
     private String method;
     private String protocol;
@@ -53,7 +55,7 @@ public class HTTPRequestInfo {
     }
 
     public String getProxyModifiedRequest() {
-        String request = this.request.replaceAll("Proxy-Connection:.*\r\n", "");;
-        return request.replace(this.absoluteUri, this.pathUri);
+        String request = this.request.replaceAll("Proxy-Connection:.*\r\n", "");
+        return request.replaceFirst(absoluteUri, pathUri);
     }
 }
