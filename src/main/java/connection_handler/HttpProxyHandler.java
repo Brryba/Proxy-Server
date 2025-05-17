@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutorService;
 public class HttpProxyHandler {
     private final ExecutorService pool;
     private final SocketsConnectionManager connectionManager;
+    private String hostName;
 
     public HttpProxyHandler(ExecutorService pool, SocketsConnectionManager connectionManager) {
         this.pool = pool;
@@ -19,6 +20,7 @@ public class HttpProxyHandler {
 
     public void startHTTPConnection(Socket clientSocket, HttpRequestInfo requestInfo) {
         try {
+            hostName = requestInfo.getHost();
             Socket httpSocket = new Socket(requestInfo.getHost(), requestInfo.getPort());
             String improvedRequest = logAndUpdateRequestInfo(requestInfo);
             httpSocket.getOutputStream().write(improvedRequest.getBytes(), 0, improvedRequest.length());
@@ -76,12 +78,12 @@ public class HttpProxyHandler {
     private void logResponse(byte[] bytes, int bytesRead) {
         String response = new String(bytes, 0, bytesRead);
         if (!response.startsWith("HTTP")) {
-            System.out.println("\nResponse with no header, length: " + bytesRead);
+            System.out.println("\nResponse with no header form " + hostName + ", length: " + bytesRead);
             return;
         }
 
         int emptyLineIndex = response.indexOf("\r\n\r\n");
-        System.out.println("Response:");
+        System.out.println("Response from " + hostName + ":");
         if (emptyLineIndex == -1) {
             System.out.println(response);
         } else {
