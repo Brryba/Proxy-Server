@@ -1,5 +1,6 @@
 import config.ProxyConfig;
 import connection_handler.HttpProxyHandler;
+import connection_handler.HttpsMitm;
 import connection_handler.HttpsTunnel;
 import model.HttpRequestInfo;
 import utils.SocketsConnectionManager;
@@ -38,9 +39,9 @@ public class Main {
             if (requestInfo.getProtocol().equals("HTTP") && !requestInfo.getMethod().equals("CONNECT")) {
                 HttpProxyHandler tunnel = new HttpProxyHandler(pool, new SocketsConnectionManager());
                 tunnel.startHTTPConnection(clientSocket, requestInfo);
-            } else if (requestInfo.getMethod().equals("CONNECT")) {
-                HttpsTunnel tunnel = new HttpsTunnel(pool, new SocketsConnectionManager());
-                tunnel.startTunnel(clientSocket, requestInfo);
+            } else if (requestInfo.getMethod().equals("CONNECT") && requestInfo.getHost().contains("bsuir")) {
+                HttpsMitm tunnel = new HttpsMitm(pool, new SocketsConnectionManager());
+                tunnel.startMitm(clientSocket, requestInfo);
             }
         } catch (IOException e) {
             System.err.println(e.getMessage());
