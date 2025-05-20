@@ -3,6 +3,7 @@ import connection_handler.HttpProxyHandler;
 import connection_handler.HttpsMitm;
 import connection_handler.HttpsTunnel;
 import model.HttpRequestInfo;
+import utils.SSLCertificateManager;
 import utils.SocketsConnectionManager;
 
 import java.io.IOException;
@@ -40,7 +41,7 @@ public class Main {
                 HttpProxyHandler tunnel = new HttpProxyHandler(pool, new SocketsConnectionManager());
                 tunnel.startHTTPConnection(clientSocket, requestInfo);
             } else if (requestInfo.getMethod().equals("CONNECT")) {
-                HttpsMitm tunnel = new HttpsMitm(pool, new SocketsConnectionManager());
+                HttpsMitm tunnel = new HttpsMitm(pool, new SocketsConnectionManager(), new SSLCertificateManager());
                 tunnel.startMitm(clientSocket, requestInfo);
             }
         } catch (IOException e) {
