@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 
 public class Main {
 
-    private static final ExecutorService pool = Executors.newFixedThreadPool(ProxyConfig.MAX_THREADS);
+    private static final ExecutorService pool = Executors.newCachedThreadPool();
     private static final ProxyConfig proxyConfig = new ProxyConfig();
 
     public static void main(String[] args) {

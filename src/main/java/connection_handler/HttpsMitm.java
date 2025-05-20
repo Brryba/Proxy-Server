@@ -1,23 +1,16 @@
 package connection_handler;
 
-import config.CertificateConfig;
 import config.ProxyConfig;
 import model.HttpRequestInfo;
-import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import utils.SSLCertificateManager;
 import utils.SocketsConnectionManager;
 
 import javax.net.ssl.*;
 import java.io.*;
-import java.math.BigInteger;
 import java.net.Socket;
 import java.security.*;
-import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Enumeration;
 import java.util.concurrent.ExecutorService;
 
 
@@ -85,9 +78,6 @@ public class HttpsMitm {
                 logResponse(response);
                 clientSSLSocket.getOutputStream().write(buf, 0, bytesRead);
                 clientSSLSocket.getOutputStream().flush();
-                if (response.contains("Connection: close")) {
-                    connectionManager.shutDownConnections(clientSSLSocket, serverSSLSocket);
-                }
             }
         } catch (Exception e) {
             System.out.println(e.getMessage());
