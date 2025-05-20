@@ -23,7 +23,6 @@ public class HttpsTunnel {
     }
 
     public void startTunnel(Socket clientSocket, HttpRequestInfo requestInfo) {
-        System.out.println(requestInfo.getRequest());
         this.hostName = requestInfo.getHost();
 
         try {

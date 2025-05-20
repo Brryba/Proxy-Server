@@ -3,6 +3,7 @@ import connection_handler.HttpProxyHandler;
 import connection_handler.HttpsMitm;
 import connection_handler.HttpsTunnel;
 import model.HttpRequestInfo;
+import utils.BlackListChecker;
 import utils.SSLCertificateManager;
 import utils.SocketsConnectionManager;
 
@@ -14,8 +15,10 @@ import java.util.concurrent.Executors;
 public class Main {
 
     private static final ExecutorService pool = Executors.newFixedThreadPool(ProxyConfig.MAX_THREADS);
+    private static final ProxyConfig proxyConfig = new ProxyConfig();
 
     public static void main(String[] args) {
+        proxyConfig.initialize();
         try (ServerSocket serverSocket = new ServerSocket(ProxyConfig.PORT, ProxyConfig.BACKLOG, InetAddress.getByName(ProxyConfig.HOST))) {
             while (true) {
                 Socket socket = serverSocket.accept();
@@ -37,12 +40,19 @@ public class Main {
                 System.err.println(e.getMessage());
                 return;
             }
+            System.out.println(requestInfo.getRequest());
+            if (BlackListChecker.isBlackListed(clientSocket, requestInfo)) return;
             if (requestInfo.getProtocol().equals("HTTP") && !requestInfo.getMethod().equals("CONNECT")) {
                 HttpProxyHandler tunnel = new HttpProxyHandler(pool, new SocketsConnectionManager());
                 tunnel.startHTTPConnection(clientSocket, requestInfo);
             } else if (requestInfo.getMethod().equals("CONNECT")) {
-                HttpsMitm tunnel = new HttpsMitm(pool, new SocketsConnectionManager(), new SSLCertificateManager());
-                tunnel.startMitm(clientSocket, requestInfo);
+                if (ProxyConfig.httpsMode == ProxyConfig.HttpsMode.HTTPS_TUNNEL) {
+                    HttpsTunnel tunnel = new HttpsTunnel(pool, new SocketsConnectionManager());
+                    tunnel.startTunnel(clientSocket, requestInfo);
+                } else {
+                    HttpsMitm mitmProxy = new HttpsMitm(pool, new SocketsConnectionManager(), new SSLCertificateManager());
+                    mitmProxy.startMitm(clientSocket, requestInfo);
+                }
             }
         } catch (IOException e) {
             System.err.println(e.getMessage());

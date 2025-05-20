@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutorService;
 
 import static config.CertificateConfig.*;
 
+@SuppressWarnings("DuplicatedCode")
 public class HttpsMitm {
     private final ExecutorService pool;
     private final SocketsConnectionManager connectionManager;
@@ -55,7 +56,9 @@ public class HttpsMitm {
                 while (true) {
                     byte[] buf = new byte[ProxyConfig.BUFFER_SIZE];
                     int bytesRead = clientSSLSocket.getInputStream().read(buf);
-                    System.out.println(new String(buf, 0, bytesRead));
+                    HttpRequestInfo request = new HttpRequestInfo();
+                    request.setRequestData(buf, bytesRead);
+                    System.out.println(requestInfo.getRequest());
                     if (bytesRead == -1) {
                         connectionManager.shutDownConnections(clientSSLSocket, serverSSLSocket);
                         break;
@@ -78,8 +81,13 @@ public class HttpsMitm {
                     break;
                 }
 
+                String response = new String(buf, 0, bytesRead);
+                logResponse(response);
                 clientSSLSocket.getOutputStream().write(buf, 0, bytesRead);
                 clientSSLSocket.getOutputStream().flush();
+                if (response.contains("Connection: close")) {
+                    connectionManager.shutDownConnections(clientSSLSocket, serverSSLSocket);
+                }
             }
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -142,5 +150,19 @@ public class HttpsMitm {
         clientSslSocket.setUseClientMode(false);
         clientSslSocket.startHandshake();
         return clientSslSocket;
+    }
+
+    private void logResponse(String response) {
+        if (!response.startsWith("HTTP")) {
+            return;
+        }
+        int emptyLineIndex = response.indexOf("\r\n\r\n");
+        System.out.println("Response from " + hostName + ":");
+        if (emptyLineIndex == -1) {
+            System.out.println(response);
+        } else {
+            System.out.println(response.substring(0, emptyLineIndex));
+        }
+        System.out.println("\n");
     }
 }
