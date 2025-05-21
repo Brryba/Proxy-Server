@@ -2,5 +2,4 @@ https-mode: "mitm"
 blacklist:
   - "google.com"
   - "*.bsuir.by"
-  - "example.com"
   - "*.pl"

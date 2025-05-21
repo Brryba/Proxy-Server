@@ -2,6 +2,7 @@ package connection_handler;
 
 import config.ProxyConfig;
 import model.HttpRequestInfo;
+import service.ResponseCacheService;
 import utils.SocketsConnectionManager;
 
 import java.io.IOException;
@@ -84,6 +85,7 @@ public class HttpProxyHandler {
 
         int emptyLineIndex = response.indexOf("\r\n\r\n");
         System.out.println("Response from " + hostName + ":");
+        ResponseCacheService.getInstance().cacheResponse(response);
         if (emptyLineIndex == -1) {
             System.out.println(response);
         } else {

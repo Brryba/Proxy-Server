@@ -3,7 +3,7 @@ import connection_handler.HttpProxyHandler;
 import connection_handler.HttpsMitm;
 import connection_handler.HttpsTunnel;
 import model.HttpRequestInfo;
-import utils.BlackListChecker;
+import service.BlackListChecker;
 import utils.SSLCertificateManager;
 import utils.SocketsConnectionManager;
 
