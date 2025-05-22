@@ -31,4 +31,8 @@ public class ResponseCacheService {
     public byte[] getResponse(String absoluteUri) {
         return repository.readResponse(absoluteUri);
     }
+
+    public boolean containsResponse(String absoluteUri) {
+        return repository.containsResponse(absoluteUri);
+    }
 }

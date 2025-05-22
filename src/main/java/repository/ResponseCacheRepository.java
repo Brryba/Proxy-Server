@@ -47,12 +47,17 @@ public class ResponseCacheRepository {
     public byte[] readResponse(String absoluteUri) {
         String name = "uri:" + absoluteUri;
         String response = redisCommands.hget(name, "response");
-        response = response.replace("[", "").replace("]", "");
+        response = response.substring(1, response.length() - 1);
         String[] nums = response.split(",");
         byte[] responseBytes = new byte[nums.length];
         for (int i = 0; i < nums.length; i++) {
             responseBytes[i] = Byte.parseByte(nums[i].trim());
         }
         return responseBytes;
+    }
+
+    public boolean containsResponse(String absoluteUri) {
+        String name = "uri:" + absoluteUri;
+        return redisCommands.hget(name, "response") != null;
     }
 }
