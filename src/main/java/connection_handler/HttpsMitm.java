@@ -48,30 +48,38 @@ public class HttpsMitm {
             return;
         }
 
-        pool.execute(() -> {
-            try {
-                while (true) {
-                    byte[] buf = new byte[ProxyConfig.BUFFER_SIZE];
-                    int bytesRead = clientSSLSocket.getInputStream().read(buf);
-                    HttpRequestInfo request = new HttpRequestInfo();
-                    request.setRequestData(buf, bytesRead);
-                    System.out.println(requestInfo.getRequest());
-                    requests.addFirst(request.getHost() + request.getPathUri());
-                    if (bytesRead == -1) {
-                        connectionManager.shutDownConnections(clientSSLSocket, serverSSLSocket);
-                        break;
-                    }
-                    System.out.println(new String(buf, 0, bytesRead));
-                    serverSSLSocket.getOutputStream().write(buf, 0, bytesRead);
-                    serverSSLSocket.getOutputStream().flush();
-                }
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-            }
-        });
+        pool.execute(() -> handleClientToServer(clientSSLSocket, serverSSLSocket));
+        handleServerToClient(clientSSLSocket, serverSSLSocket);
+    }
 
+
+    private void handleClientToServer(SSLSocket clientSSLSocket, SSLSocket serverSSLSocket) {
         try {
-            byte[] responseData;
+            while (true) {
+                byte[] buf = new byte[ProxyConfig.BUFFER_SIZE];
+                int bytesRead = clientSSLSocket.getInputStream().read(buf);
+                HttpRequestInfo request = new HttpRequestInfo();
+                request.setRequestData(buf, bytesRead);
+                System.out.println(request.getRequest());
+                requests.addFirst(request.getHost() + request.getPathUri());
+                if (bytesRead == -1) {
+                    connectionManager.shutDownConnections(clientSSLSocket, serverSSLSocket);
+                    break;
+                }
+                System.out.println(new String(buf, 0, bytesRead));
+                serverSSLSocket.getOutputStream().write(buf, 0, bytesRead);
+                serverSSLSocket.getOutputStream().flush();
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private void handleServerToClient(SSLSocket clientSSLSocket, SSLSocket serverSSLSocket) {
+        try {
+            ByteArrayOutputStream chunkedBuffer = null;
+            boolean isChunkedResponse = false;
+
             while (true) {
                 byte[] buf = new byte[ProxyConfig.BUFFER_SIZE];
                 int bytesRead = serverSSLSocket.getInputStream().read(buf);
@@ -80,28 +88,61 @@ public class HttpsMitm {
                     break;
                 }
 
-                logResponse(new String(buf, 0, bytesRead));
-
-                responseData = Arrays.copyOf(buf, bytesRead);
-                byte[] finalResponseData = responseData;
-                if (!isChunked(buf, bytesRead)) {
-                    CompletableFuture.runAsync(() -> responseCacheService.cacheResponse(requests.removeLast(), finalResponseData));
-                }
-
                 clientSSLSocket.getOutputStream().write(buf, 0, bytesRead);
                 clientSSLSocket.getOutputStream().flush();
-//                byte[] mockResponse = responseCacheService.getResponse("www.mirostat.by/");
-//                clientSSLSocket.getOutputStream().write(mockResponse, 0, mockResponse.length);
-//                clientSSLSocket.getOutputStream().flush();
+
+                byte[] mockResponse = responseCacheService.getResponse(requests.getLast());
+                clientSSLSocket.getOutputStream().write(mockResponse, 0, mockResponse.length);
+                clientSSLSocket.getOutputStream().flush();
+
+                logResponse(new String(buf, 0, bytesRead));
+
+                if (!isChunkedResponse) {
+                    chunkedBuffer = null;
+                    isChunkedResponse = isChunked(buf, bytesRead);
+                    if (isChunkedResponse) {
+                        chunkedBuffer = new ByteArrayOutputStream();
+                    }
+                }
+
+                isChunkedResponse = cacheResponseAndSetChunked(buf, bytesRead, isChunkedResponse, chunkedBuffer);
             }
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
     }
 
+    private boolean cacheResponseAndSetChunked(byte[] response, int responseLength, boolean isChunked, ByteArrayOutputStream chunkedBuffer) {
+        if (isChunked) {
+            chunkedBuffer.write(response, 0, responseLength);
+
+            if (isEndOfChunked(response, responseLength)) {
+                byte[] fullData = chunkedBuffer.toByteArray();
+                CompletableFuture.runAsync(() ->
+                        responseCacheService.cacheResponse(requests.removeLast(), fullData));
+                return false;
+            }
+        } else {
+            byte[] finalResponseData = Arrays.copyOf(response, responseLength);
+            CompletableFuture.runAsync(() ->
+                    responseCacheService.cacheResponse(requests.removeLast(), finalResponseData));
+            return false;
+        }
+        return true;
+    }
+
     private boolean isChunked(byte[] response, int length) {
         String headers = new String(response, 0, Math.min(length, 2048));
         return headers.contains("Transfer-Encoding: chunked");
+    }
+
+    private boolean isEndOfChunked(byte[] data, int dataLength) {
+        if (dataLength < 5) return false;
+        return data[dataLength - 5] == '0' &&
+                data[dataLength - 4] == '\r' &&
+                data[dataLength - 3] == '\n' &&
+                data[dataLength - 2] == '\r' &&
+                data[dataLength - 1] == '\n';
     }
 
     private SSLSocket startServerHttpsConnection(Socket clientSocket, HttpRequestInfo requestInfo) {
