@@ -40,8 +40,8 @@ public class Main {
                 System.err.println(e.getMessage());
                 return;
             }
-            System.out.println(requestInfo.getRequest());
             if (BlackListChecker.isBlackListed(clientSocket, requestInfo)) return;
+            System.out.println(requestInfo.getRequest());
             if (requestInfo.getProtocol().equals("HTTP") && !requestInfo.getMethod().equals("CONNECT")) {
                 HttpProxyHandler tunnel = new HttpProxyHandler(pool, new SocketsConnectionManager());
                 tunnel.startHTTPConnection(clientSocket, requestInfo);

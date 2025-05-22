@@ -7,16 +7,22 @@ import utils.SocketsConnectionManager;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 
 public class HttpProxyHandler {
     private final ExecutorService pool;
     private final SocketsConnectionManager connectionManager;
+    private final ResponseCacheService service;
     private String hostName;
 
     public HttpProxyHandler(ExecutorService pool, SocketsConnectionManager connectionManager) {
         this.pool = pool;
         this.connectionManager = connectionManager;
+    }
+
+    {
+        service = ResponseCacheService.getInstance();
     }
 
     public void startHTTPConnection(Socket clientSocket, HttpRequestInfo requestInfo) {
@@ -85,7 +91,8 @@ public class HttpProxyHandler {
 
         int emptyLineIndex = response.indexOf("\r\n\r\n");
         System.out.println("Response from " + hostName + ":");
-        ResponseCacheService.getInstance().cacheResponse(response);
+        byte[] responseArr = Arrays.copyOf(bytes, bytesRead);
+       // service.cacheResponse("www.mirostat.by", "/", responseArr);
         if (emptyLineIndex == -1) {
             System.out.println(response);
         } else {

@@ -1,5 +1,5 @@
 https-mode: "mitm"
 blacklist:
-  - "google.com"
   - "*.bsuir.by"
   - "*.pl"
+  - "google-analytics.com"

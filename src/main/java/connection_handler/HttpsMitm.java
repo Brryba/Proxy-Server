@@ -3,6 +3,7 @@ package connection_handler;
 import config.ProxyConfig;
 import model.HttpRequestInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import service.ResponseCacheService;
 import utils.SSLCertificateManager;
 import utils.SocketsConnectionManager;
 
@@ -11,26 +12,29 @@ import java.io.*;
 import java.net.Socket;
 import java.security.*;
 import java.security.cert.X509Certificate;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 
 import static config.CertificateConfig.*;
 
-@SuppressWarnings("DuplicatedCode")
 public class HttpsMitm {
     private final ExecutorService pool;
     private final SocketsConnectionManager connectionManager;
     private final SSLCertificateManager certificateManager;
+    private final ResponseCacheService responseCacheService;
     private String hostName;
-
-    private enum Direction {
-        REQUEST, RESPONSE
-    }
+    private final Deque<String> requests = new ArrayDeque<>();
 
     public HttpsMitm(ExecutorService pool, SocketsConnectionManager connectionManager, SSLCertificateManager certificateManager) {
         this.certificateManager = certificateManager;
         this.pool = pool;
         this.connectionManager = connectionManager;
+    }
+
+    {
+        responseCacheService = ResponseCacheService.getInstance();
     }
 
     public void startMitm(Socket clientSocket, HttpRequestInfo requestInfo) {
@@ -52,6 +56,7 @@ public class HttpsMitm {
                     HttpRequestInfo request = new HttpRequestInfo();
                     request.setRequestData(buf, bytesRead);
                     System.out.println(requestInfo.getRequest());
+                    requests.addFirst(request.getHost() + request.getPathUri());
                     if (bytesRead == -1) {
                         connectionManager.shutDownConnections(clientSSLSocket, serverSSLSocket);
                         break;
@@ -66,6 +71,7 @@ public class HttpsMitm {
         });
 
         try {
+            byte[] responseData;
             while (true) {
                 byte[] buf = new byte[ProxyConfig.BUFFER_SIZE];
                 int bytesRead = serverSSLSocket.getInputStream().read(buf);
@@ -74,14 +80,28 @@ public class HttpsMitm {
                     break;
                 }
 
-                String response = new String(buf, 0, bytesRead);
-                logResponse(response);
+                logResponse(new String(buf, 0, bytesRead));
+
+                responseData = Arrays.copyOf(buf, bytesRead);
+                byte[] finalResponseData = responseData;
+                if (!isChunked(buf, bytesRead)) {
+                    CompletableFuture.runAsync(() -> responseCacheService.cacheResponse(requests.removeLast(), finalResponseData));
+                }
+
                 clientSSLSocket.getOutputStream().write(buf, 0, bytesRead);
                 clientSSLSocket.getOutputStream().flush();
+//                byte[] mockResponse = responseCacheService.getResponse("www.mirostat.by/");
+//                clientSSLSocket.getOutputStream().write(mockResponse, 0, mockResponse.length);
+//                clientSSLSocket.getOutputStream().flush();
             }
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.err.println(e.getMessage());
         }
+    }
+
+    private boolean isChunked(byte[] response, int length) {
+        String headers = new String(response, 0, Math.min(length, 2048));
+        return headers.contains("Transfer-Encoding: chunked");
     }
 
     private SSLSocket startServerHttpsConnection(Socket clientSocket, HttpRequestInfo requestInfo) {

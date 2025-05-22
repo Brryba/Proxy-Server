@@ -3,17 +3,23 @@ package repository;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
-import lombok.Getter;
+import model.Response;
 
-import java.time.LocalDateTime;
+import java.util.Arrays;
 
 public class ResponseCacheRepository {
     private final RedisClient redisClient;
     private final StatefulRedisConnection<String, String> connection;
     private final RedisCommands<String, String> redisCommands;
 
-    @Getter
     private static ResponseCacheRepository instance = new ResponseCacheRepository();
+
+    public static ResponseCacheRepository getInstance() {
+        if (instance == null) {
+            instance = new ResponseCacheRepository();
+        }
+        return instance;
+    }
 
     private ResponseCacheRepository() {
         try {
@@ -26,16 +32,27 @@ public class ResponseCacheRepository {
         }
     }
 
-    public void addResponse(String uri, String response, int ttl, LocalDateTime lastModified, String eTag) {
+    public void addResponse(String uri, Response response) {
         String name = "uri:" + uri;
-        redisCommands.hset(name, "response", response);
-        if (lastModified != null) {
-            redisCommands.hset(name, "lastModified", lastModified.toString());
+        redisCommands.hset(name, "response", Arrays.toString(response.getResponseBytes()));
+        if (response.getLastModified() != null) {
+            redisCommands.hset(name, "lastModified", response.getLastModified().toString());
         }
-        redisCommands.hset(name, "eTag", eTag);
-        redisCommands.expire(name, ttl);
-        try {
-            Thread.sleep(6000);
-        } catch (InterruptedException _) {}
+        if (response.getETag() != null) {
+            redisCommands.hset(name, "eTag", response.getETag());
+        }
+        redisCommands.expire(name, response.getTimeToLive());
+    }
+
+    public byte[] readResponse(String absoluteUri) {
+        String name = "uri:" + absoluteUri;
+        String response = redisCommands.hget(name, "response");
+        response = response.replace("[", "").replace("]", "");
+        String[] nums = response.split(",");
+        byte[] responseBytes = new byte[nums.length];
+        for (int i = 0; i < nums.length; i++) {
+            responseBytes[i] = Byte.parseByte(nums[i].trim());
+        }
+        return responseBytes;
     }
 }
