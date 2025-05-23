@@ -3,8 +3,6 @@ package service;
 import lombok.Getter;
 import model.Response;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class ResponseMapper {
@@ -13,7 +11,7 @@ public class ResponseMapper {
     @Getter
     private static ResponseMapper instance = new ResponseMapper();
 
-    private static int MAX_AGE = 3600;
+    private static final int MAX_AGE = 3600;
 
     public Response toResponseModel(byte[] responseArr) {
         String response = new String(responseArr);

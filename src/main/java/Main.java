@@ -43,7 +43,7 @@ public class Main {
             if (BlackListChecker.isBlackListed(clientSocket, requestInfo)) return;
             System.out.println(requestInfo.getRequest());
             if (requestInfo.getProtocol().equals("HTTP") && !requestInfo.getMethod().equals("CONNECT")) {
-                HttpProxyHandler tunnel = new HttpProxyHandler(pool, new SocketsConnectionManager());
+                HttpProxyHandler tunnel = new HttpProxyHandler(pool);
                 tunnel.startHTTPConnection(clientSocket, requestInfo);
             } else if (requestInfo.getMethod().equals("CONNECT")) {
                 if (ProxyConfig.httpsMode == ProxyConfig.HttpsMode.HTTPS_TUNNEL) {
