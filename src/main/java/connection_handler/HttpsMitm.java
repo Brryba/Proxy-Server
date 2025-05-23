@@ -76,12 +76,12 @@ public class HttpsMitm {
                 if (responseCacheService.containsResponse(requests.getLast())) {
                     if (canBeFromCache) {
                         writeCachedRequestToClient(clientSSLSocket);
-                        System.out.println(requests.getLast() + " CACHED");
+                        System.out.println(requests.getLast() + " LOADED FROM CACHE");
                         requests.removeLast();
                     } else {
                         serverSSLSocket.getOutputStream().write(buf, 0, bytesRead);
                         serverSSLSocket.getOutputStream().flush();
-                        System.out.println("FORBIDEN " + requests.getLast());
+                        System.out.println(requests.getLast() + " FOUND IN CACHE BUT WAS NOT LOADED");
                     }
                 } else {
                     serverSSLSocket.getOutputStream().write(buf, 0, bytesRead);
