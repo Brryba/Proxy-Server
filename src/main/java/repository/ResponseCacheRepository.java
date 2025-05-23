@@ -35,12 +35,6 @@ public class ResponseCacheRepository {
     public void addResponse(String uri, Response response) {
         String name = "uri:" + uri;
         redisCommands.hset(name, "response", Arrays.toString(response.getResponseBytes()));
-        if (response.getLastModified() != null) {
-            redisCommands.hset(name, "lastModified", response.getLastModified().toString());
-        }
-        if (response.getETag() != null) {
-            redisCommands.hset(name, "eTag", response.getETag());
-        }
         redisCommands.expire(name, response.getTimeToLive());
     }
 

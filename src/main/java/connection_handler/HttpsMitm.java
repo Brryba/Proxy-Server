@@ -59,10 +59,12 @@ public class HttpsMitm {
             while (true) {
                 byte[] buf = new byte[ProxyConfig.BUFFER_SIZE];
                 int bytesRead = clientSSLSocket.getInputStream().read(buf);
+                boolean canBeFromCache = false;
                 try {
                     HttpRequestInfo r = new HttpRequestInfo();
                     r.setRequestData(buf, bytesRead);
                     requests.addFirst(r.getHost() + r.getPathUri());
+                    canBeFromCache = r.isCanBeFromCache();
                     System.out.println(r.getRequest());
                 } catch (Exception _) {
                 }
@@ -72,9 +74,15 @@ public class HttpsMitm {
                 }
 
                 if (responseCacheService.containsResponse(requests.getLast())) {
-                    writeCachedRequestToClient(clientSSLSocket);
-                    System.out.println(requests.getLast() + " CACHED");
-                    requests.removeLast();
+                    if (canBeFromCache) {
+                        writeCachedRequestToClient(clientSSLSocket);
+                        System.out.println(requests.getLast() + " CACHED");
+                        requests.removeLast();
+                    } else {
+                        serverSSLSocket.getOutputStream().write(buf, 0, bytesRead);
+                        serverSSLSocket.getOutputStream().flush();
+                        System.out.println("FORBIDEN " + requests.getLast());
+                    }
                 } else {
                     serverSSLSocket.getOutputStream().write(buf, 0, bytesRead);
                     serverSSLSocket.getOutputStream().flush();

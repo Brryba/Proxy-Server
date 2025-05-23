@@ -6,8 +6,6 @@ import model.Response;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class ResponseMapper {
     private ResponseMapper() {}
@@ -31,21 +29,8 @@ public class ResponseMapper {
             }
             ttl = parseTTl(cache);
         }
-        LocalDateTime lastModified = parseDateTime(headersMap);
-        String eTag = headersMap.get("etag");
 
-        return new Response(responseArr, ttl == -1 ? MAX_AGE : ttl, eTag, lastModified);
-    }
-
-    private LocalDateTime parseDateTime(Map<String, String> headersMap) {
-        LocalDateTime lastModifiedDate = null;
-        if (headersMap.containsKey("last-modified")) {
-            String lastModified = headersMap.get("last-modified").trim();
-            DateTimeFormatter HTTP_DATE_FORMATTER =
-                    DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH);
-                lastModifiedDate = LocalDateTime.parse(lastModified, HTTP_DATE_FORMATTER);
-        }
-        return lastModifiedDate;
+        return new Response(responseArr, ttl == -1 ? MAX_AGE : ttl);
     }
 
     private long parseTTl(List<String> cacheParams) {

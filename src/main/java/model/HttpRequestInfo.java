@@ -13,6 +13,7 @@ public class HttpRequestInfo {
     private String pathUri;
     private String host;
     private int port;
+    private boolean canBeFromCache;
 
     public void setRequestData(byte[] requestData, int requestLength) throws IllegalArgumentException {
         String request;
@@ -51,6 +52,24 @@ public class HttpRequestInfo {
         } else {
             this.host = hostParameter;
             this.port = protocol.equalsIgnoreCase("HTTP") ? 80 : 443;
+        }
+
+        String cachedStatus = Arrays.stream(requestParts)
+                .filter(str -> str.startsWith("Cache-Control:"))
+                .findFirst().orElse(null);
+        if (cachedStatus != null) {
+            String cachedStatusValue = cachedStatus.replace("Cache-Control:", "").trim();
+            String[] cachedStatusParts = cachedStatusValue.split(",");
+            this.canBeFromCache = true;
+            for (String cachedStatusPart : cachedStatusParts) {
+                String temp = cachedStatusPart.trim();
+                if (temp.startsWith("no-cache") || temp.startsWith("no-store") || temp.startsWith("max-age=0")) {
+                    this.canBeFromCache = false;
+                    break;
+                }
+            }
+        } else {
+            this.canBeFromCache = true;
         }
     }
 

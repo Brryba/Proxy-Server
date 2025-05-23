@@ -10,6 +10,4 @@ import java.time.LocalDateTime;
 public class Response {
     byte[] responseBytes;
     long timeToLive;
-    String eTag;
-    LocalDateTime lastModified;
 }
